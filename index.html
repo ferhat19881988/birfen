@@ -1,0 +1,1709 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BirFen - Ders Programı & Atama Sistemi (Modern)</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      /* Modern Renk Paleti */
+      --bg-body: #0f172a;
+      --bg-gradient: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                     radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                     radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+      
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      
+      --primary: #6366f1; /* Indigo */
+      --primary-hover: #4f46e5;
+      --success: #10b981; /* Emerald */
+      --danger: #ef4444; /* Red */
+      --warning: #f59e0b; /* Amber */
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      
+      --input-bg: rgba(15, 23, 42, 0.6);
+      --input-border: rgba(148, 163, 184, 0.2);
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      
+      --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font-main);
+      background-color: var(--bg-body);
+      background-image: var(--bg-gradient);
+      background-attachment: fixed;
+      background-size: cover;
+      color: var(--text-main);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Scrollbar Tasarımı */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+    /* Header */
+    header {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 1rem 0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
+
+    .topbar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem;
+    }
+
+    .brand {
+      display: flex; align-items: center; gap: 0.75rem;
+      font-weight: 700; font-size: 1.1rem; letter-spacing: -0.025em;
+      color: #fff;
+    }
+    .brand .dot {
+      width: 10px; height: 10px; background: var(--primary);
+      border-radius: 50%; box-shadow: 0 0 15px var(--primary);
+    }
+
+    .smallnote {
+      font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; display: block;
+    }
+
+    .status {
+      display: flex; gap: 0.75rem; font-size: 0.85rem;
+    }
+    .pill {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--card-border);
+      padding: 4px 12px; border-radius: 99px;
+      display: flex; align-items: center; gap: 6px;
+      transition: all 0.2s;
+    }
+    .pill:hover { background: rgba(255,255,255,0.1); }
+    .pill b { color: #fff; font-weight: 600; }
+
+    /* Layout Grid */
+    .grid {
+      display: grid; grid-template-columns: 1fr; gap: 1.5rem;
+      padding: 2rem 0 4rem;
+    }
+    @media(min-width: 1024px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+      .span2 { grid-column: span 2; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--card-shadow);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+
+    .card h2 {
+      margin: 0; padding: 1.25rem 1.5rem;
+      font-size: 1rem; font-weight: 600;
+      background: rgba(0,0,0,0.2);
+      border-bottom: 1px solid var(--card-border);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    }
+
+    .card h2 .right { display: flex; gap: 8px; }
+
+    .content { padding: 1.5rem; }
+
+    /* Form Elements */
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 12px; }
+    .grid2 { display: grid; gap: 1.5rem; grid-template-columns: 1fr; }
+    @media(min-width:768px){ .grid2{ grid-template-columns: 1fr 1fr; } }
+
+    label {
+      font-size: 0.75rem; font-weight: 500; color: var(--text-muted);
+      margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      color: var(--text-main);
+      padding: 0.65rem 0.85rem;
+      border-radius: var(--radius-sm);
+      font-family: inherit; font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      background: rgba(15, 23, 42, 0.9);
+    }
+    input::placeholder { color: rgba(148, 163, 184, 0.5); }
+
+    .field { flex: 1; min-width: 140px; }
+    .field.small { flex: 0 0 100px; }
+    .field.wide { flex: 2; min-width: 200px; }
+
+    /* Buttons */
+    button {
+      font-family: inherit; font-weight: 500; font-size: 0.85rem;
+      padding: 0.65rem 1.25rem; border-radius: var(--radius-sm);
+      border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      transition: all 0.2s ease; white-space: nowrap;
+    }
+    button:active { transform: scale(0.98); }
+
+    /* Primary (Add/Save) - .btn .btn2 */
+    .btn, .btn2 {
+      background: var(--primary); color: white;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+    .btn:hover, .btn2:hover { background: var(--primary-hover); }
+
+    /* Success (Sync) - .btn2 overrides to Green if desired, or stick to Primary logic. 
+       Original code used btn2 for save/sync. Let's make btn2 Green. */
+    .btn2 {
+      background: var(--success);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .btn2:hover { filter: brightness(1.1); background: var(--success); }
+
+    /* Destructive - .btn3 */
+    .btn3 {
+      background: rgba(239, 68, 68, 0.15); color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .btn3:hover { background: rgba(239, 68, 68, 0.25); color: #fff; border-color: var(--danger); }
+
+    /* Warning/Info - .btn4 */
+    .btn4 {
+      background: rgba(245, 158, 11, 0.15); color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .btn4:hover { background: rgba(245, 158, 11, 0.25); color: #fff; }
+
+    /* Ghost */
+    .ghost {
+      background: transparent; border: 1px dashed var(--input-border);
+      color: var(--text-muted);
+    }
+    .ghost:hover { border-color: var(--text-muted); color: var(--text-main); }
+
+    /* Tables */
+    .tablewrap {
+      margin-top: 1rem;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      overflow: auto;
+      background: rgba(0,0,0,0.2);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    
+    th {
+      text-align: left; padding: 12px 16px;
+      background: rgba(30, 41, 59, 0.95);
+      color: var(--text-muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase;
+      position: sticky; top: 0; z-index: 10;
+    }
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.03); }
+
+    .rightAlign { text-align: right; }
+
+    /* Chips & Tags */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .chip {
+      font-size: 0.8rem; padding: 4px 10px; border-radius: 99px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-muted);
+    }
+    .chip.good { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #6ee7b7; }
+    .chip.bad  { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+
+    /* Divider & Hint */
+    .divider { height: 1px; background: var(--card-border); margin: 1.5rem 0; }
+    .hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem; font-style: italic; }
+    .mono { font-family: 'SFMono-Regular', Consolas, monospace; opacity: 0.8; }
+
+    /* Availability Matrix */
+    .matrix {
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      background: rgba(0,0,0,0.2);
+      margin-top: 1rem;
+    }
+    .matrix table { min-width: 800px; }
+    .matrix th, .matrix td { text-align: center; border-color: var(--card-border); padding: 8px; }
+    .matrix th:first-child, .matrix td:first-child { 
+      text-align: left; position: sticky; left: 0; 
+      background: rgba(15, 23, 42, 0.95); z-index: 2;
+    }
+
+    .toggle {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 6px 10px; border-radius: var(--radius-sm);
+      font-size: 0.8rem; cursor: pointer; user-select: none;
+      border: 1px solid transparent; width: 100%;
+      transition: all 0.15s;
+    }
+    .toggle .mark { font-weight: 900; font-size: 1rem; }
+    .toggle.off {
+      background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.1); color: var(--text-muted);
+    }
+    .toggle.off:hover { background: rgba(255,255,255,0.08); }
+    
+    .toggle.on {
+      background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #6ee7b7;
+    }
+    .toggle.on:hover { background: rgba(16, 185, 129, 0.3); }
+
+    /* Print Area */
+    .printArea {
+      background: #fff; color: #1e293b;
+      padding: 2rem; border-radius: var(--radius-md);
+    }
+    .printArea h3 { margin-top: 0; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+    .printArea table th { background: #f1f5f9; color: #475569; }
+    .printArea table td, .printArea table th { border-bottom: 1px solid #e2e8f0; color: #334155; }
+
+    /* Print Media Query */
+    @media print {
+      body { background: white; color: black; }
+      header, .noPrint, .card { box-shadow: none; border: none; }
+      header, .noPrint, .card h2 .right, .btn, .btn2, .btn3, .btn4, .ghost, input, select, .hint { display: none !important; }
+      .wrap { padding: 0; max-width: none; }
+      .grid { display: block; padding: 0; }
+      .card { background: transparent; backdrop-filter: none; page-break-inside: avoid; display: none; } /* Hide all cards usually */
+      /* Only show print container content if we really want, but usually custom print logic is handled by hiding UI */
+      .card:has(#printContainer) { display: block; border: none; }
+      .printArea { display: block; padding: 0; width: 100%; }
+    }
+    
+    /* Utility Animations */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .card { animation: fadeIn 0.4s ease-out backwards; }
+    .card:nth-child(2) { animation-delay: 0.1s; }
+    .card:nth-child(3) { animation-delay: 0.2s; }
+    .card:nth-child(4) { animation-delay: 0.3s; }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <div class="brand"><span class="dot"></span> BirFen — Sistem Yönetimi</div>
+        <div class="smallnote">
+          Veriler <span class="mono">/birfen</span> altında saklanır.
+        </div>
+      </div>
+      <div class="status">
+        <div class="pill"><span>Firebase:</span> <b id="fbState">Bağlanıyor…</b></div>
+        <div class="pill"><span>Öğretmen:</span> <b id="kTeacher">0</b></div>
+        <div class="pill"><span>Öğrenci:</span> <b id="kStudent">0</b></div>
+        <div class="pill"><span>Slot:</span> <b id="kSlot">0</b></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <section class="card">
+      <h2>
+        <span><i class="mono">01.</i> Öğretmenler</span>
+        <div class="right noPrint">
+          <button class="btn4" id="btnTeacherTemplate">Şablon</button>
+          <button class="btn2" id="btnTeacherSync">Kaydet</button>
+          <button class="btn3" id="btnTeacherDeleteSelected">Sil</button>
+        </div>
+      </h2>
+      <div class="content">
+        <div class="row noPrint">
+          <div class="field wide">
+            <label>Ad Soyad</label>
+            <input id="tName" placeholder="Örn: Ferhat Karagöz" />
+          </div>
+          <div class="field">
+            <label>Branş</label>
+            <input id="tBranch" placeholder="Örn: Fen Bilimleri" />
+          </div>
+          <button class="btn" id="btnTeacherAdd" style="align-self: flex-end;">Ekle</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row noPrint">
+          <div class="field wide">
+            <label>Excel Import (XLSX)</label>
+            <input type="file" id="tFile" accept=".xlsx,.xls" style="padding: 0.4rem;" />
+            <div class="hint">Kolonlar: <span class="mono">name, branch</span></div>
+          </div>
+          <button class="btn" id="btnTeacherImport" style="align-self:center">Yükle</button>
+          <button class="ghost" id="btnTeacherClearLocal" style="align-self:center">Temizle</button>
+        </div>
+
+        <div class="tablewrap">
+          <table id="teacherTable">
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>Ad Soyad</th>
+                <th>Branş</th>
+                <th class="rightAlign">İşlem</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>
+        <span><i class="mono">02.</i> Öğrenciler</span>
+        <div class="right noPrint">
+          <button class="btn4" id="btnStudentTemplate">Şablon</button>
+          <button class="btn2" id="btnStudentSync">Kaydet</button>
+          <button class="btn3" id="btnStudentDeleteSelected">Sil</button>
+        </div>
+      </h2>
+      <div class="content">
+        <div class="row noPrint">
+          <div class="field small">
+            <label>No</label>
+            <input id="sNo" placeholder="123" />
+          </div>
+          <div class="field wide">
+            <label>Ad Soyad</label>
+            <input id="sName" placeholder="Ad Soyad" />
+          </div>
+          <div class="field small">
+            <label>Sınıf</label>
+            <input id="sClass" placeholder="7A" />
+          </div>
+          <button class="btn" id="btnStudentAdd" style="align-self: flex-end;">Ekle</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row noPrint">
+          <div class="field wide">
+            <label>Excel Import (XLSX)</label>
+            <input type="file" id="sFile" accept=".xlsx,.xls" style="padding: 0.4rem;" />
+            <div class="hint">Kolonlar: <span class="mono">number, fullName, class</span></div>
+          </div>
+          <button class="btn" id="btnStudentImport" style="align-self:center">Yükle</button>
+          <button class="ghost" id="btnStudentClearLocal" style="align-self:center">Temizle</button>
+        </div>
+
+        <div class="tablewrap">
+          <table id="studentTable">
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>No</th>
+                <th>Ad Soyad</th>
+                <th>Sınıf</th>
+                <th class="rightAlign">İşlem</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="card span2">
+      <h2>
+        <span><i class="mono">03.</i> Ders Planı / Slotlar</span>
+        <div class="right noPrint">
+          <button class="btn2" id="btnSlotSync">Kaydet</button>
+          <button class="btn3" id="btnSlotDeleteSelected">Sil</button>
+        </div>
+      </h2>
+      <div class="content">
+        <div class="grid2 noPrint">
+          <div>
+            <div class="row">
+              <div class="field small">
+                <label>Gün</label>
+                <select id="slotDay"></select>
+              </div>
+              <div class="field small">
+                <label>Başlangıç</label>
+                <input id="slotStart" type="time" value="14:20"/>
+              </div>
+              <div class="field small">
+                <label>Bitiş</label>
+                <input id="slotEnd" type="time" value="15:00"/>
+              </div>
+              <button class="btn" id="btnSlotAdd" style="align-self: flex-end;">Ekle</button>
+              <button class="ghost" id="btnSlotClearLocal" style="align-self: flex-end;">Temizle</button>
+            </div>
+            <div class="hint">
+              Slotlar atama sisteminin temelidir. Müsaitlik buraya göre belirlenir.
+            </div>
+          </div>
+          
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+            <div class="pill">Sıralama: <b>Gün + Saat</b></div>
+            <div class="pill">Format: <b>HH:MM</b></div>
+            <div class="pill">DB: <b class="mono">/birfen/schedule</b></div>
+          </div>
+        </div>
+
+        <div class="tablewrap">
+          <table id="slotTable">
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>Gün</th>
+                <th>Saat Aralığı</th>
+                <th class="rightAlign">İşlem</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="card span2">
+      <h2>
+        <span><i class="mono">04.</i> Öğretmen Müsaitlik</span>
+        <div class="right noPrint">
+          <button class="btn" id="btnAvailAllOn">Tümü Uygun</button>
+          <button class="btn3" id="btnAvailAllOff">Hiçbiri</button>
+          <button class="btn2" id="btnAvailSave">Kaydet</button>
+          <button class="btn3" id="btnAvailDelete">Sil</button>
+        </div>
+      </h2>
+      <div class="content">
+        <div class="row noPrint">
+          <div class="field wide">
+            <label>Öğretmen Seç</label>
+            <select id="availTeacher"></select>
+          </div>
+          <div class="field wide">
+            <label>Filtrele</label>
+            <input id="availFilter" placeholder="Gün veya saat ara..." />
+          </div>
+        </div>
+
+        <div class="matrix">
+          <table id="availMatrix">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="hint">
+          Hücreye tıklayarak <span style="color:var(--success)">Uygun</span> veya <span style="color:var(--text-muted)">Uygun Değil</span> olarak işaretleyin.
+        </div>
+      </div>
+    </section>
+
+    <section class="card span2">
+      <h2>
+        <span><i class="mono">05.</i> Atama İşlemleri</span>
+        <div class="right noPrint">
+          <button class="btn2" id="btnAssignSave">Atamayı Kaydet</button>
+          <button class="btn3" id="btnAssignDelete">Atamayı Sil</button>
+        </div>
+      </h2>
+      <div class="content">
+        <div class="grid2 noPrint">
+          <div>
+            <div class="row">
+              <div class="field wide">
+                <label>Öğretmen</label>
+                <select id="assignTeacher"></select>
+              </div>
+              <div class="field wide">
+                <label>Uygun Slot</label>
+                <select id="assignSlot"></select>
+              </div>
+            </div>
+            
+            <div class="row" style="margin-top:1rem">
+              <div class="field wide">
+                <label>Öğrenci Ara</label>
+                <input id="studentFilter" placeholder="İsim, numara..." />
+              </div>
+              <button class="btn" id="btnAssignSelectAll" style="align-self:flex-end">Tümü</button>
+              <button class="ghost" id="btnAssignClearSel" style="align-self:flex-end">Temizle</button>
+            </div>
+
+            <div class="tablewrap" style="max-height:350px;">
+              <table id="assignStudentTable">
+                <thead>
+                  <tr>
+                    <th style="width:40px">#</th>
+                    <th>No</th>
+                    <th>Ad Soyad</th>
+                    <th>Sınıf</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <label>Seçim Özeti</label>
+            <div class="chips" id="assignSummary" style="min-height:40px; margin-bottom:1rem"></div>
+            
+            <div class="divider"></div>
+            
+            <label>Veritabanındaki Mevcut Atama</label>
+            <div id="existingAssign" class="chips"></div>
+            <div class="hint">
+              Kaydettikten sonra üstteki seçim veritabanına işlenir.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card span2">
+      <h2>
+        <span><i class="mono">06.</i> Çıktı Al</span>
+        <div class="right noPrint">
+          <button class="btn" id="btnPrint">Yazdır</button>
+        </div>
+      </h2>
+      <div class="content">
+        <div class="row noPrint">
+          <div class="field wide">
+            <label>Öğretmen Seç</label>
+            <select id="printTeacher"></select>
+          </div>
+          <button class="btn2" id="btnBuildPrint" style="align-self:flex-end">Listeyi Getir</button>
+        </div>
+
+        <div style="margin-top:1.5rem" id="printContainer" class="printArea">
+          <h3>Liste Önizleme</h3>
+          <div class="muted">Öğretmen seçip "Listeyi Getir" butonuna basınız.</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, update, remove, push, get, child } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+  // ===== Firebase Config (User provided) =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyAIzu6aNQstwQCdMWODyIwiaVVBm63OeGw",
+    authDomain: "odevfeno.firebaseapp.com",
+    databaseURL: "https://odevfeno-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "odevfeno",
+    storageBucket: "odevfeno.firebasestorage.app",
+    messagingSenderId: "662757516934",
+    appId: "1:662757516934:web:0042188832f63deb6fd307",
+    measurementId: "G-4Q99NQRB38"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const ROOT = "birfen";
+
+  // ===== Helpers =====
+  const DAYS = [
+    { key:"Pazartesi", order:1 },
+    { key:"Salı", order:2 },
+    { key:"Çarşamba", order:3 },
+    { key:"Perşembe", order:4 },
+    { key:"Cuma", order:5 },
+    { key:"Cumartesi", order:6 },
+    { key:"Pazar", order:7 }
+  ];
+
+  const $ = (id)=>document.getElementById(id);
+  const fbState = $("fbState");
+  const kTeacher = $("kTeacher");
+  const kStudent = $("kStudent");
+  const kSlot = $("kSlot");
+
+  function nowISO(){ return new Date().toISOString(); }
+
+  function timeToMin(t){
+    if(!t || !t.includes(":")) return 0;
+    const [h,m] = t.split(":").map(Number);
+    return (h*60)+(m||0);
+  }
+  function slotLabel(s){ return `${s.start}–${s.end}`; }
+
+  function downloadXlsx(headers, sampleRows, filename){
+    const wb = XLSX.utils.book_new();
+    const data = [headers, ...sampleRows];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, filename);
+  }
+
+  function readXlsx(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        try{
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, { type:"array" });
+          const sheetName = wb.SheetNames[0];
+          const ws = wb.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:"" });
+          resolve(rows);
+        }catch(err){ reject(err); }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function normalizeHeader(h){
+    return String(h||"").trim().toLowerCase();
+  }
+
+  function toast(msg, kind="info"){
+    // lightweight toast using title bar
+    const prev = fbState.textContent;
+    fbState.textContent = msg;
+    fbState.style.color =
+      kind==="ok" ? "rgba(189,255,222,.95)" :
+      kind==="bad" ? "rgba(255,210,220,.95)" :
+      kind==="warn" ? "rgba(255,235,190,.95)" :
+      "rgba(231,238,252,.95)";
+    setTimeout(()=>{ fbState.textContent = prev; fbState.style.color=""; }, 2200);
+  }
+
+  function safeText(s){ return String(s??"").trim(); }
+
+  // ===== Local State =====
+  let teachers = {};      // {id:{name,branch,createdAt}}
+  let students = {};      // {id:{number,fullName,class,createdAt}}
+  let slots = {};         // {id:{day,start,end,dayOrder,startMin,endMin,createdAt}}
+  let availability = {};  // {teacherId:{slotId:true/false}}
+  let assignments = {};   // {teacherId:{slotId:{studentIds:{sid:true}, createdAt}}}
+
+  // ===== Populate day select =====
+  function fillDays(){
+    const sel = $("slotDay");
+    sel.innerHTML = "";
+    for(const d of DAYS){
+      const opt = document.createElement("option");
+      opt.value = d.key;
+      opt.textContent = d.key;
+      sel.appendChild(opt);
+    }
+  }
+  fillDays();
+
+  // ===== Firebase refs =====
+  const rTeachers = ref(db, `${ROOT}/teachers`);
+  const rStudents = ref(db, `${ROOT}/students`);
+  const rSlots    = ref(db, `${ROOT}/schedule/slots`);
+  const rAvail    = ref(db, `${ROOT}/availability`);
+  const rAssign   = ref(db, `${ROOT}/assignments`);
+
+  // ===== Live sync from Firebase =====
+  function attachListeners(){
+    onValue(rTeachers, snap=>{
+      teachers = snap.val() || {};
+      renderTeachers();
+      refreshTeacherSelects();
+      kTeacher.textContent = Object.keys(teachers).length;
+    }, err=>{
+      console.error(err);
+      fbState.textContent = "Bağlantı Hatası";
+    });
+
+    onValue(rStudents, snap=>{
+      students = snap.val() || {};
+      renderStudents();
+      refreshStudentUI();
+      kStudent.textContent = Object.keys(students).length;
+    });
+
+    onValue(rSlots, snap=>{
+      slots = snap.val() || {};
+      renderSlots();
+      refreshSlotDependentUI();
+      kSlot.textContent = Object.keys(slots).length;
+    });
+
+    onValue(rAvail, snap=>{
+      availability = snap.val() || {};
+      renderAvailabilityMatrix();
+      refreshAssignSlots();
+    });
+
+    onValue(rAssign, snap=>{
+      assignments = snap.val() || {};
+      refreshExistingAssignmentView();
+      rebuildPrintIfVisible();
+    });
+
+    fbState.textContent = "Bağlandı";
+  }
+  attachListeners();
+
+  // ===== UI Rendering: Teachers =====
+  function renderTeachers(){
+    const tbody = $("teacherTable").querySelector("tbody");
+    tbody.innerHTML = "";
+    const arr = Object.entries(teachers).map(([id,t])=>({id, ...t}))
+      .sort((a,b)=> (a.name||"").localeCompare(b.name||"", "tr"));
+
+    for(const t of arr){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input type="checkbox" data-id="${t.id}" class="tSel"></td>
+        <td>${safeText(t.name)}</td>
+        <td>${safeText(t.branch)}</td>
+        <td class="rightAlign">
+          <button class="btn3" data-id="${t.id}" data-act="delTeacher">Sil</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  $("teacherTable").addEventListener("click", async (e)=>{
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    const id = btn.getAttribute("data-id");
+    const act = btn.getAttribute("data-act");
+    if(act === "delTeacher" && id){
+      await deleteTeacher(id);
+    }
+  });
+
+  async function addTeacherToLocal(name, branch){
+    const n = safeText(name);
+    const b = safeText(branch);
+    if(!n || !b){
+      toast("Öğretmen adı ve branş gerekli", "warn");
+      return;
+    }
+    const id = push(rTeachers).key;
+    teachers[id] = { name:n, branch:b, createdAt: nowISO() };
+    renderTeachers();
+    refreshTeacherSelects();
+  }
+
+  $("btnTeacherAdd").addEventListener("click", ()=>{
+    addTeacherToLocal($("tName").value, $("tBranch").value);
+    $("tName").value = "";
+    $("tBranch").value = "";
+  });
+
+  $("btnTeacherTemplate").addEventListener("click", ()=>{
+    downloadXlsx(
+      ["name","branch"],
+      [
+        ["Ferhat Karagöz","Fen Bilimleri"],
+        ["Ayşe Demir","Matematik"]
+      ],
+      "ogretmen_sablon.xlsx"
+    );
+  });
+
+  $("btnTeacherImport").addEventListener("click", async ()=>{
+    const file = $("tFile").files?.[0];
+    if(!file){ toast("Excel dosyası seçin", "warn"); return; }
+    try{
+      const rows = await readXlsx(file);
+      if(rows.length < 2){ toast("Dosya boş görünüyor", "warn"); return; }
+      const header = rows[0].map(normalizeHeader);
+      const idxName = header.indexOf("name");
+      const idxBranch = header.indexOf("branch");
+      if(idxName<0 || idxBranch<0){
+        toast("Başlıklar name ve branch olmalı", "bad");
+        return;
+      }
+
+      let added = 0;
+      for(let i=1;i<rows.length;i++){
+        const r = rows[i] || [];
+        const name = safeText(r[idxName]);
+        const branch = safeText(r[idxBranch]);
+        if(!name || !branch) continue;
+        const id = push(rTeachers).key;
+        teachers[id] = { name, branch, createdAt: nowISO() };
+        added++;
+      }
+      renderTeachers();
+      refreshTeacherSelects();
+      toast(`${added} öğretmen eklendi (yerel)`, "ok");
+    }catch(err){
+      console.error(err);
+      toast("Excel okunamadı", "bad");
+    }finally{
+      $("tFile").value = "";
+    }
+  });
+
+  $("btnTeacherClearLocal").addEventListener("click", ()=>{
+    // Only clears local view; Firebase will re-fill from listener. So this is mainly for offline usage.
+    teachers = {};
+    renderTeachers();
+    refreshTeacherSelects();
+    toast("Yerel öğretmen listesi temizlendi", "warn");
+  });
+
+  $("btnTeacherSync").addEventListener("click", async ()=>{
+    try{
+      await set(rTeachers, teachers || {});
+      toast("Öğretmenler Firebase’e kaydedildi", "ok");
+    }catch(err){
+      console.error(err);
+      toast("Kaydetme başarısız", "bad");
+    }
+  });
+
+  $("btnTeacherDeleteSelected").addEventListener("click", async ()=>{
+    const ids = [...document.querySelectorAll(".tSel:checked")].map(x=>x.getAttribute("data-id")).filter(Boolean);
+    if(ids.length===0){ toast("Seçim yok", "warn"); return; }
+    for(const id of ids){
+      await deleteTeacher(id);
+    }
+    toast("Seçilen öğretmenler silindi", "ok");
+  });
+
+  async function deleteTeacher(id){
+    try{
+      // remove teacher
+      await remove(ref(db, `${ROOT}/teachers/${id}`));
+      // cascade: availability + assignments
+      await remove(ref(db, `${ROOT}/availability/${id}`));
+      await remove(ref(db, `${ROOT}/assignments/${id}`));
+      toast("Öğretmen silindi", "ok");
+    }catch(err){
+      console.error(err);
+      toast("Silme başarısız", "bad");
+    }
+  }
+
+  // ===== UI Rendering: Students =====
+  function renderStudents(){
+    const tbody = $("studentTable").querySelector("tbody");
+    tbody.innerHTML = "";
+    const arr = Object.entries(students).map(([id,s])=>({id, ...s}))
+      .sort((a,b)=>{
+        const ca=(a.class||"").localeCompare(b.class||"", "tr");
+        if(ca!==0) return ca;
+        const na=(a.fullName||"").localeCompare(b.fullName||"", "tr");
+        if(na!==0) return na;
+        return String(a.number||"").localeCompare(String(b.number||""), "tr");
+      });
+
+    for(const s of arr){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input type="checkbox" data-id="${s.id}" class="sSel"></td>
+        <td>${safeText(s.number)}</td>
+        <td>${safeText(s.fullName)}</td>
+        <td>${safeText(s.class)}</td>
+        <td class="rightAlign">
+          <button class="btn3" data-id="${s.id}" data-act="delStudent">Sil</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  $("studentTable").addEventListener("click", async (e)=>{
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    const id = btn.getAttribute("data-id");
+    const act = btn.getAttribute("data-act");
+    if(act === "delStudent" && id){
+      await deleteStudent(id);
+    }
+  });
+
+  async function addStudentToLocal(number, fullName, cls){
+    const no = safeText(number);
+    const fn = safeText(fullName);
+    const cl = safeText(cls);
+    if(!no || !fn || !cl){
+      toast("Öğrenci no, ad soyad ve sınıf gerekli", "warn");
+      return;
+    }
+    const id = push(rStudents).key;
+    students[id] = { number:no, fullName:fn, class:cl, createdAt: nowISO() };
+    renderStudents();
+    refreshStudentUI();
+  }
+
+  $("btnStudentAdd").addEventListener("click", ()=>{
+    addStudentToLocal($("sNo").value, $("sName").value, $("sClass").value);
+    $("sNo").value = "";
+    $("sName").value = "";
+    $("sClass").value = "";
+  });
+
+  $("btnStudentTemplate").addEventListener("click", ()=>{
+    downloadXlsx(
+      ["number","fullName","class"],
+      [
+        ["125","Ayşe Yılmaz","7A"],
+        ["126","Mehmet Kaya","7A"]
+      ],
+      "ogrenci_sablon.xlsx"
+    );
+  });
+
+  $("btnStudentImport").addEventListener("click", async ()=>{
+    const file = $("sFile").files?.[0];
+    if(!file){ toast("Excel dosyası seçin", "warn"); return; }
+    try{
+      const rows = await readXlsx(file);
+      if(rows.length < 2){ toast("Dosya boş görünüyor", "warn"); return; }
+      const header = rows[0].map(normalizeHeader);
+      const idxNo = header.indexOf("number");
+      const idxName = header.indexOf("fullname");
+      const idxClass = header.indexOf("class");
+      if(idxNo<0 || idxName<0 || idxClass<0){
+        toast("Başlıklar number, fullName, class olmalı", "bad");
+        return;
+      }
+
+      let added = 0;
+      for(let i=1;i<rows.length;i++){
+        const r = rows[i] || [];
+        const no = safeText(r[idxNo]);
+        const fn = safeText(r[idxName]);
+        const cl = safeText(r[idxClass]);
+        if(!no || !fn || !cl) continue;
+        const id = push(rStudents).key;
+        students[id] = { number:no, fullName:fn, class:cl, createdAt: nowISO() };
+        added++;
+      }
+      renderStudents();
+      refreshStudentUI();
+      toast(`${added} öğrenci eklendi (yerel)`, "ok");
+    }catch(err){
+      console.error(err);
+      toast("Excel okunamadı", "bad");
+    }finally{
+      $("sFile").value = "";
+    }
+  });
+
+  $("btnStudentClearLocal").addEventListener("click", ()=>{
+    students = {};
+    renderStudents();
+    refreshStudentUI();
+    toast("Yerel öğrenci listesi temizlendi", "warn");
+  });
+
+  $("btnStudentSync").addEventListener("click", async ()=>{
+    try{
+      await set(rStudents, students || {});
+      toast("Öğrenciler Firebase’e kaydedildi", "ok");
+    }catch(err){
+      console.error(err);
+      toast("Kaydetme başarısız", "bad");
+    }
+  });
+
+  $("btnStudentDeleteSelected").addEventListener("click", async ()=>{
+    const ids = [...document.querySelectorAll(".sSel:checked")].map(x=>x.getAttribute("data-id")).filter(Boolean);
+    if(ids.length===0){ toast("Seçim yok", "warn"); return; }
+    for(const id of ids){
+      await deleteStudent(id);
+    }
+    toast("Seçilen öğrenciler silindi", "ok");
+  });
+
+  async function deleteStudent(id){
+    try{
+      await remove(ref(db, `${ROOT}/students/${id}`));
+
+      // remove student from all assignments (scan local assignment snapshot)
+      const updatesObj = {};
+      for(const [tId, slotsObj] of Object.entries(assignments || {})){
+        for(const [slotId, assignObj] of Object.entries(slotsObj || {})){
+          if(assignObj?.studentIds?.[id]){
+            updatesObj[`${ROOT}/assignments/${tId}/${slotId}/studentIds/${id}`] = null;
+          }
+        }
+      }
+      if(Object.keys(updatesObj).length){
+        await update(ref(db), updatesObj);
+      }
+      toast("Öğrenci silindi", "ok");
+    }catch(err){
+      console.error(err);
+      toast("Silme başarısız", "bad");
+    }
+  }
+
+  // ===== Slots =====
+  function sortedSlotsArray(){
+    return Object.entries(slots).map(([id,s])=>({id,...s}))
+      .sort((a,b)=>{
+        const da=(a.dayOrder||99)-(b.dayOrder||99);
+        if(da!==0) return da;
+        return (a.startMin||0)-(b.startMin||0);
+      });
+  }
+
+  function renderSlots(){
+    const tbody = $("slotTable").querySelector("tbody");
+    tbody.innerHTML = "";
+    const arr = sortedSlotsArray();
+    for(const s of arr){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input type="checkbox" data-id="${s.id}" class="slotSel"></td>
+        <td>${safeText(s.day)}</td>
+        <td>${safeText(slotLabel(s))}</td>
+        <td class="rightAlign">
+          <button class="btn3" data-id="${s.id}" data-act="delSlot">Sil</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  $("slotTable").addEventListener("click", async (e)=>{
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    const id = btn.getAttribute("data-id");
+    const act = btn.getAttribute("data-act");
+    if(act==="delSlot" && id){
+      await deleteSlot(id);
+    }
+  });
+
+  $("btnSlotAdd").addEventListener("click", ()=>{
+    const day = $("slotDay").value;
+    const start = $("slotStart").value;
+    const end = $("slotEnd").value;
+    if(!day || !start || !end){
+      toast("Gün, başlangıç, bitiş gerekli", "warn");
+      return;
+    }
+    const sm = timeToMin(start);
+    const em = timeToMin(end);
+    if(em <= sm){
+      toast("Bitiş saati başlangıçtan sonra olmalı", "warn");
+      return;
+    }
+    const dayObj = DAYS.find(d=>d.key===day) || {order:99};
+    const id = push(rSlots).key;
+    slots[id] = {
+      day,
+      dayOrder: dayObj.order,
+      start,
+      end,
+      startMin: sm,
+      endMin: em,
+      createdAt: nowISO()
+    };
+    renderSlots();
+    refreshSlotDependentUI();
+  });
+
+  $("btnSlotClearLocal").addEventListener("click", ()=>{
+    slots = {};
+    renderSlots();
+    refreshSlotDependentUI();
+    toast("Yerel slot listesi temizlendi", "warn");
+  });
+
+  $("btnSlotSync").addEventListener("click", async ()=>{
+    try{
+      await set(rSlots, slots || {});
+      toast("Slotlar Firebase’e kaydedildi", "ok");
+    }catch(err){
+      console.error(err);
+      toast("Kaydetme başarısız", "bad");
+    }
+  });
+
+  $("btnSlotDeleteSelected").addEventListener("click", async ()=>{
+    const ids = [...document.querySelectorAll(".slotSel:checked")].map(x=>x.getAttribute("data-id")).filter(Boolean);
+    if(ids.length===0){ toast("Seçim yok", "warn"); return; }
+    for(const id of ids){
+      await deleteSlot(id);
+    }
+    toast("Seçilen slotlar silindi", "ok");
+  });
+
+  async function deleteSlot(slotId){
+    try{
+      await remove(ref(db, `${ROOT}/schedule/slots/${slotId}`));
+
+      // cascade: remove this slot from all teacher availability + assignments
+      const upd = {};
+      for(const tId of Object.keys(teachers || {})){
+        upd[`${ROOT}/availability/${tId}/${slotId}`] = null;
+        upd[`${ROOT}/assignments/${tId}/${slotId}`] = null;
+      }
+      if(Object.keys(upd).length){
+        await update(ref(db), upd);
+      }
+      toast("Slot silindi", "ok");
+    }catch(err){
+      console.error(err);
+      toast("Silme başarısız", "bad");
+    }
+  }
+
+  // ===== Select Refresh =====
+  function refreshTeacherSelects(){
+    const sels = [ $("availTeacher"), $("assignTeacher"), $("printTeacher") ];
+    const list = Object.entries(teachers).map(([id,t])=>({id,...t}))
+      .sort((a,b)=> (a.name||"").localeCompare(b.name||"", "tr"));
+
+    for(const sel of sels){
+      const prev = sel.value;
+      sel.innerHTML = "";
+      const opt0 = document.createElement("option");
+      opt0.value = "";
+      opt0.textContent = "— Seçiniz —";
+      sel.appendChild(opt0);
+      for(const t of list){
+        const opt = document.createElement("option");
+        opt.value = t.id;
+        opt.textContent = `${t.name} (${t.branch})`;
+        sel.appendChild(opt);
+      }
+      if(prev && [...sel.options].some(o=>o.value===prev)) sel.value = prev;
+    }
+    renderAvailabilityMatrix();
+    refreshAssignSlots();
+    rebuildPrintIfVisible();
+  }
+
+  function refreshStudentUI(){
+    renderAssignStudentList();
+    refreshExistingAssignmentView();
+    rebuildPrintIfVisible();
+  }
+
+  function refreshSlotDependentUI(){
+    renderAvailabilityMatrix();
+    refreshAssignSlots();
+    rebuildPrintIfVisible();
+  }
+
+  // ===== Availability Matrix =====
+  function getSelectedAvailTeacher(){
+    return $("availTeacher").value || "";
+  }
+
+  function teacherAvailMap(teacherId){
+    return (availability && availability[teacherId]) ? availability[teacherId] : {};
+  }
+
+  function renderAvailabilityMatrix(){
+    const teacherId = getSelectedAvailTeacher();
+    const thead = $("availMatrix").querySelector("thead");
+    const tbody = $("availMatrix").querySelector("tbody");
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+
+    const filter = safeText($("availFilter").value).toLowerCase();
+
+    const arrSlots = sortedSlotsArray();
+    if(!teacherId){
+      thead.innerHTML = `<tr><th>Gün / Saat</th><th>Durum</th></tr>`;
+      tbody.innerHTML = `<tr><td colspan="2" class="muted" style="text-align:left;padding:14px">Müsaitlik için öğretmen seçin.</td></tr>`;
+      return;
+    }
+    if(arrSlots.length===0){
+      thead.innerHTML = `<tr><th>Gün / Saat</th><th>Durum</th></tr>`;
+      tbody.innerHTML = `<tr><td colspan="2" class="muted" style="text-align:left;padding:14px">Önce slot (gün/saat) ekleyin.</td></tr>`;
+      return;
+    }
+
+    // Group by day
+    const byDay = new Map();
+    for(const s of arrSlots){
+      const key = s.day || "—";
+      if(!byDay.has(key)) byDay.set(key, []);
+      byDay.get(key).push(s);
+    }
+
+    // Build header: first column day, then each time slot column
+    // But screenshot style was day rows + slot columns; we will do similar:
+    const uniqueSlots = arrSlots; // columns represent all slots, row day selects the day-specific slot cells
+    // Better: columns are time slots per all days? That duplicates. We'll build: row=day, col=slot label for that day.
+    // We'll compute per day the list of slot labels, but need uniform columns -> use max number of slots in any day.
+    let maxCols = 0;
+    for(const [d, list] of byDay.entries()){
+      maxCols = Math.max(maxCols, list.length);
+    }
+
+    const headRow = document.createElement("tr");
+    headRow.innerHTML = `<th style="text-align:left">Gün / Saat</th>` + Array.from({length:maxCols}, (_,i)=>`<th>Slot ${i+1}</th>`).join("");
+    thead.appendChild(headRow);
+
+    const avMap = teacherAvailMap(teacherId);
+
+    for(const d of DAYS.map(x=>x.key)){
+      const list = byDay.get(d) || [];
+      // apply filter: if filter provided, skip rows that don't match any cell/day
+      if(filter){
+        const dayMatch = d.toLowerCase().includes(filter);
+        const anySlotMatch = list.some(s=> slotLabel(s).toLowerCase().includes(filter));
+        if(!dayMatch && !anySlotMatch) continue;
+      }
+
+      const tr = document.createElement("tr");
+      const first = document.createElement("td");
+      first.style.textAlign = "left";
+      first.innerHTML = `<b>${d}</b>`;
+      tr.appendChild(first);
+
+      for(let i=0;i<maxCols;i++){
+        const td = document.createElement("td");
+        if(!list[i]){
+          td.innerHTML = `<span class="muted">—</span>`;
+        }else{
+          const slot = list[i];
+          const on = !!avMap?.[slot.id];
+          const cls = on ? "on" : "off";
+          const label = slotLabel(slot);
+          const btn = document.createElement("div");
+          btn.className = `toggle ${cls}`;
+          btn.setAttribute("data-slot", slot.id);
+          btn.innerHTML = `<span class="mark">${on ? "✓" : "✕"}</span><span>${label}</span>`;
+          td.appendChild(btn);
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+  }
+
+  $("availTeacher").addEventListener("change", ()=>{
+    renderAvailabilityMatrix();
+    refreshAssignSlots();
+  });
+  $("availFilter").addEventListener("input", renderAvailabilityMatrix);
+
+  $("availMatrix").addEventListener("click", (e)=>{
+    const t = e.target.closest(".toggle");
+    if(!t) return;
+    const teacherId = getSelectedAvailTeacher();
+    if(!teacherId) return;
+    const slotId = t.getAttribute("data-slot");
+    if(!slotId) return;
+
+    if(!availability[teacherId]) availability[teacherId] = {};
+    const cur = !!availability[teacherId][slotId];
+    availability[teacherId][slotId] = !cur;
+
+    renderAvailabilityMatrix();
+    refreshAssignSlots();
+  });
+
+  $("btnAvailAllOn").addEventListener("click", ()=>{
+    const teacherId = getSelectedAvailTeacher();
+    if(!teacherId){ toast("Öğretmen seçin", "warn"); return; }
+    if(!availability[teacherId]) availability[teacherId] = {};
+    for(const s of sortedSlotsArray()){
+      availability[teacherId][s.id] = true;
+    }
+    renderAvailabilityMatrix();
+    refreshAssignSlots();
+  });
+
+  $("btnAvailAllOff").addEventListener("click", ()=>{
+    const teacherId = getSelectedAvailTeacher();
+    if(!teacherId){ toast("Öğretmen seçin", "warn"); return; }
+    availability[teacherId] = {}; // clear map
+    renderAvailabilityMatrix();
+    refreshAssignSlots();
+  });
+
+  $("btnAvailSave").addEventListener("click", async ()=>{
+    const teacherId = getSelectedAvailTeacher();
+    if(!teacherId){ toast("Öğretmen seçin", "warn"); return; }
+    try{
+      await set(ref(db, `${ROOT}/availability/${teacherId}`), availability[teacherId] || {});
+      toast("Müsaitlik kaydedildi", "ok");
+    }catch(err){
+      console.error(err);
+      toast("Kaydetme başarısız", "bad");
+    }
+  });
+
+  $("btnAvailDelete").addEventListener("click", async ()=>{
+    const teacherId = getSelectedAvailTeacher();
+    if(!teacherId){ toast("Öğretmen seçin", "warn"); return; }
+    try{
+      await remove(ref(db, `${ROOT}/availability/${teacherId}`));
+      toast("Müsaitlik silindi", "ok");
+    }catch(err){
+      console.error(err);
+      toast("Silme başarısız", "bad");
+    }
+  });
+
+  // ===== Assignments =====
+  function getAssignTeacher(){ return $("assignTeacher").value || ""; }
+  function getAssignSlot(){ return $("assignSlot").value || ""; }
+
+  function refreshAssignSlots(){
+    const teacherId = getAssignTeacher();
+    const sel = $("assignSlot");
+    const prev = sel.value;
+    sel.innerHTML = "";
+
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = "— Slot seçiniz —";
+    sel.appendChild(opt0);
+
+    if(!teacherId){
+      return;
+    }
+    const av = teacherAvailMap(teacherId);
+    const arr = sortedSlotsArray()
+      .filter(s=> !!av?.[s.id]) // only available
+      .map(s=>({id:s.id, day:s.day, label:slotLabel(s), dayOrder:s.dayOrder, startMin:s.startMin}))
+      .sort((a,b)=> (a.dayOrder-b.dayOrder) || (a.startMin-b.startMin));
+
+    for(const s of arr){
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = `${s.day} — ${s.label}`;
+      sel.appendChild(opt);
+    }
+    if(prev && [...sel.options].some(o=>o.value===prev)) sel.value = prev;
+
+    refreshExistingAssignmentView();
+    renderAssignStudentList();
+    updateAssignSummary();
+  }
+
+  $("assignTeacher").addEventListener("change", ()=>{
+    refreshAssignSlots();
+  });
+  $("assignSlot").addEventListener("change", ()=>{
+    refreshExistingAssignmentView();
+    updateAssignSummary();
+  });
+
+  function renderAssignStudentList(){
+    const tbody = $("assignStudentTable").querySelector("tbody");
+    tbody.innerHTML = "";
+    const filter = safeText($("studentFilter").value).toLowerCase();
+
+    const arr = Object.entries(students).map(([id,s])=>({id,...s}))
+      .filter(s=>{
+        if(!filter) return true;
+        const hay = `${s.number} ${s.fullName} ${s.class}`.toLowerCase();
+        return hay.includes(filter);
+      })
+      .sort((a,b)=>{
+        const ca=(a.class||"").localeCompare(b.class||"", "tr");
+        if(ca!==0) return ca;
+        return (a.fullName||"").localeCompare(b.fullName||"", "tr");
+      });
+
+    // existing assignment for current teacher+slot
+    const teacherId = getAssignTeacher();
+    const slotId = getAssignSlot();
+    const existing = (teacherId && slotId) ? (assignments?.[teacherId]?.[slotId]?.studentIds || {}) : {};
+
+    for(const s of arr){
+      const tr = document.createElement("tr");
+      const checked = !!existing?.[s.id];
+      tr.innerHTML = `
+        <td><input type="checkbox" class="aSel" data-id="${s.id}" ${checked ? "checked" : ""}></td>
+        <td>${safeText(s.number)}</td>
+        <td>${safeText(s.fullName)}</td>
+        <td>${safeText(s.class)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  $("studentFilter").addEventListener("input", renderAssignStudentList);
+
+  $("btnAssignSelectAll").addEventListener("click", ()=>{
+    document.querySelectorAll("#assignStudentTable .aSel").forEach(cb=> cb.checked = true);
+    updateAssignSummary();
+  });
+  $("btnAssignClearSel").addEventListener("click", ()=>{
+    document.querySelectorAll("#assignStudentTable .aSel").forEach(cb=> cb.checked = false);
+    updateAssignSummary();
+  });
+
+  $("assignStudentTable").addEventListener("change", (e)=>{
+    if(e.target.classList.contains("aSel")){
+      updateAssignSummary();
+    }
+  });
+
+  function selectedStudentIds(){
+    return [...document.querySelectorAll("#assignStudentTable .aSel:checked")]
+      .map(x=>x.getAttribute("data-id"))
+      .filter(Boolean);
+  }
+
+  function updateAssignSummary(){
+    const box = $("assignSummary");
+    box.innerHTML = "";
+    const teacherId = getAssignTeacher();
+    const slotId = getAssignSlot();
+    const t = teacherId ? teachers[teacherId] : null;
+    const s = slotId ? slots[slotId] : null;
+
+    const chips = [];
+    if(t) chips.push({text:`Öğretmen: ${t.name}`, kind:""});
+    if(s) chips.push({text:`Slot: ${s.day} ${slotLabel(s)}`, kind:""});
+    const ids = selectedStudentIds();
+    chips.push({text:`Seçili Öğrenci: ${ids.length}`, kind: ids.length ? "good" : ""});
+
+    for(const c of chips){
+      const el = document.createElement("div");
+      el.className = `chip ${c.kind||""}`;
+      el.textContent = c.text;
+      box.appendChild(el);
+    }
+  }
+
+  function refreshExistingAssignmentView(){
+    const box = $("existingAssign");
+    box.innerHTML = "";
+    const teacherId = getAssignTeacher();
+    const slotId = getAssignSlot();
+    if(!teacherId || !slotId){
+      box.innerHTML = `<div class="chip">Öğretmen ve slot seçin.</div>`;
+      return;
+    }
+    const studentIds = assignments?.[teacherId]?.[slotId]?.studentIds || {};
+    const ids = Object.keys(studentIds).filter(sid=>studentIds[sid]);
+
+    if(ids.length===0){
+      box.innerHTML = `<div class="chip">Bu slot için atama yok.</div>`;
+      return;
+    }
+    for(const sid of ids){
+      const st = students[sid];
+      const el = document.createElement("div");
+      el.className = "chip good";
+      el.textContent = st ? `${st.number} — ${st.fullName} (${st.class})` : `Silinmiş öğrenci (${sid})`;
+      box.appendChild(el);
+    }
+  }
+
+  $("btnAssignSave").addEventListener("click", async ()=>{
+    const teacherId = getAssignTeacher();
+    const slotId = getAssignSlot();
+    if(!teacherId){ toast("Öğretmen seçin", "warn"); return; }
+    if(!slotId){ toast("Slot seçin (uygun olanlardan)", "warn"); return; }
+
+    // guard: teacher must be available
+    const av = teacherAvailMap(teacherId);
+    if(!av?.[slotId]){
+      toast("Bu slot öğretmen için uygun değil", "bad");
+      return;
+    }
+
+    const ids = selectedStudentIds();
+    const studentIds = {};
+    for(const id of ids){ studentIds[id] = true; }
+
+    try{
+      await set(ref(db, `${ROOT}/assignments/${teacherId}/${slotId}`), {
+        studentIds,
+        createdAt: nowISO()
+      });
+      toast("Atama kaydedildi", "ok");
+      refreshExistingAssignmentView();
+      rebuildPrintIfVisible();
+    }catch(err){
+      console.error(err);
+      toast("Kaydetme başarısız", "bad");
+    }
+  });
+
+  $("btnAssignDelete").addEventListener("click", async ()=>{
+    const teacherId = getAssignTeacher();
+    const slotId = getAssignSlot();
+    if(!teacherId){ toast("Öğretmen seçin", "warn"); return; }
+    if(!slotId){ toast("Slot seçin", "warn"); return; }
+    try{
+      await remove(ref(db, `${ROOT}/assignments/${teacherId}/${slotId}`));
+      toast("Atama silindi", "ok");
+      renderAssignStudentList();
+      refreshExistingAssignmentView();
+      rebuildPrintIfVisible();
+    }catch(err){
+      console.error(err);
+      toast("Silme başarısız", "bad");
+    }
+  });
+
+  // ===== Print =====
+  function rebuildPrintIfVisible(){
+    // if a teacher selected and print area has content, rebuild.
+    // We'll rebuild when user explicitly requests too, but keep consistent.
+    const teacherId = $("printTeacher").value || "";
+    const container = $("printContainer");
+    if(!teacherId) return;
+    if(container && container.dataset.built === "1"){
+      buildPrint();
+    }
+  }
+
+  function buildPrint(){
+    const teacherId = $("printTeacher").value || "";
+    const container = $("printContainer");
+    if(!teacherId){
+      container.innerHTML = `<h3>Liste</h3><div class="muted">Öğretmen seçip “Listeyi Oluştur”a basın.</div>`;
+      container.dataset.built = "0";
+      return;
+    }
+
+    const t = teachers[teacherId];
+    const assignObj = assignments?.[teacherId] || {};
+    const lines = [];
+
+    for(const [slotId, a] of Object.entries(assignObj)){
+      const slot = slots[slotId];
+      if(!slot) continue;
+      const stIds = Object.keys(a?.studentIds || {}).filter(x=>a.studentIds[x]);
+      if(stIds.length===0) continue;
+
+      // expand students
+      const stList = stIds
+        .map(sid => ({ sid, st: students[sid] }))
+        .map(x=>{
+          const s = x.st;
+          return s ? `${s.number} — ${s.fullName} (${s.class})` : `Silinmiş öğrenci (${x.sid})`;
+        })
+        .sort((a,b)=> a.localeCompare(b, "tr"));
+
+      lines.push({
+        day: slot.day,
+        dayOrder: slot.dayOrder || 99,
+        startMin: slot.startMin || 0,
+        time: slotLabel(slot),
+        students: stList
+      });
+    }
+
+    lines.sort((a,b)=> (a.dayOrder-b.dayOrder) || (a.startMin-b.startMin));
+
+    // group by day
+    const byDay = new Map();
+    for(const l of lines){
+      if(!byDay.has(l.day)) byDay.set(l.day, []);
+      byDay.get(l.day).push(l);
+    }
+
+    let html = `<h3>${t ? `${t.name} (${t.branch})` : "Öğretmen"}</h3>`;
+    if(lines.length===0){
+      html += `<div class="muted">Bu öğretmen için atama bulunamadı.</div>`;
+      container.innerHTML = html;
+      container.dataset.built = "1";
+      return;
+    }
+
+    html += `<table>
+      <thead><tr><th style="width:140px">Gün</th><th style="width:120px">Saat</th><th>Öğrenciler</th></tr></thead>
+      <tbody>`;
+
+    for(const d of DAYS.map(x=>x.key)){
+      const list = byDay.get(d) || [];
+      for(const l of list){
+        html += `<tr>
+          <td>${d}</td>
+          <td>${l.time}</td>
+          <td>${l.students.map(x=>`<div>${escapeHtml(x)}</div>`).join("")}</td>
+        </tr>`;
+      }
+    }
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+    container.dataset.built = "1";
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  $("btnBuildPrint").addEventListener("click", buildPrint);
+  $("btnPrint").addEventListener("click", ()=>{
+    buildPrint();
+    window.print();
+  });
+
+  // ===== wiring: assignment student list updates on change =====
+  $("assignTeacher").addEventListener("change", ()=>{
+    renderAssignStudentList();
+    updateAssignSummary();
+  });
+  $("assignSlot").addEventListener("change", ()=>{
+    renderAssignStudentList();
+    updateAssignSummary();
+  });
+
+  // ===== Initial: fill selects =====
+  function refreshAll(){
+    refreshTeacherSelects();
+    renderTeachers();
+    renderStudents();
+    renderSlots();
+    renderAvailabilityMatrix();
+    refreshAssignSlots();
+    renderAssignStudentList();
+    updateAssignSummary();
+  }
+  // listeners will call these, but call once for first paint
+  refreshAll();
+
+</script>
+</body>
+</html>
