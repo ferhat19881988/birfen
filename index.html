@@ -236,6 +236,25 @@
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: rgba(255,255,255,0.03); }
 
+    /* Group rows (Atama Listesi) */
+    .groupRow td{
+      background: rgba(99, 102, 241, 0.12);
+      color: #c7d2fe;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(99, 102, 241, 0.18);
+    }
+    .groupRow td .mutedSmall{
+      font-weight: 500;
+      color: rgba(199, 210, 254, 0.85);
+      margin-left: 10px;
+      font-size: 0.8rem;
+    }
+    .miniBtn{
+      padding: 0.45rem 0.7rem;
+      font-size: 0.78rem;
+    }
+
+
     .rightAlign { text-align: right; }
 
     /* Chips & Tags */
@@ -595,10 +614,55 @@
         </div>
       </div>
     </section>
+    <section class="card span2">
+      <h2>
+        <span><i class="mono">06.</i> Atama Listesi</span>
+        <div class="right noPrint">
+          <button class="btn3" id="btnAssignListDeleteSelected">Seçileni Sil</button>
+          <button class="btn3" id="btnAssignListDeleteAll">Tümünü Sil</button>
+        </div>
+      </h2>
+      <div class="content">
+        <div class="row noPrint">
+          <div class="field wide">
+            <label>Öğretmene Göre</label>
+            <select id="assignListTeacher"></select>
+          </div>
+          <div class="field wide">
+            <label>Ara</label>
+            <input id="assignListSearch" placeholder="Öğretmen, gün, saat, öğrenci..." />
+          </div>
+          <button class="ghost" id="btnAssignListClearSel" style="align-self:flex-end">Seçimi Temizle</button>
+        </div>
+
+        <div class="hint">
+          Atamalar öğretmene göre gruplanır. Satırları işaretleyip seçilenleri veya tüm atamaları silebilirsiniz.
+        </div>
+
+        <div class="tablewrap" style="max-height:520px;">
+          <table id="assignmentListTable">
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>Öğretmen</th>
+                <th>Branş</th>
+                <th>Gün</th>
+                <th>Saat</th>
+                <th>Öğrenci</th>
+                <th class="rightAlign">İşlem</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+
 
     <section class="card span2">
       <h2>
-        <span><i class="mono">06.</i> Çıktı Al</span>
+        <span><i class="mono">07.</i> Çıktı Al</span>
         <div class="right noPrint">
           <button class="btn" id="btnPrint">Yazdır</button>
         </div>
@@ -720,6 +784,198 @@
   let availability = {};  // {teacherId:{slotId:true/false}}
   let assignments = {};   // {teacherId:{slotId:{studentIds:{sid:true}, createdAt}}}
 
+  // ===== Atama Listesi (Gruplu) =====
+  let assignmentListSelection = new Set(); // key: teacherId__slotId
+
+  const aKey = (teacherId, slotId)=> `${teacherId}__${slotId}`;
+  function parseAKey(k){
+    const i = String(k||"").indexOf("__");
+    if(i<0) return { teacherId:"", slotId:"" };
+    return { teacherId: k.slice(0,i), slotId: k.slice(i+2) };
+  }
+
+  function renderAssignmentList(){
+    const table = $("assignmentListTable");
+    if(!table) return;
+    const tbody = table.querySelector("tbody");
+    tbody.innerHTML = "";
+
+    const teacherFilter = $("assignListTeacher") ? ($("assignListTeacher").value || "") : "";
+    const q = safeText($("assignListSearch") ? $("assignListSearch").value : "").toLowerCase();
+
+    const teacherArr = Object.entries(teachers || {})
+      .map(([id,t])=>({id, ...t}))
+      .sort((a,b)=> (a.name||"").localeCompare(b.name||"", "tr"));
+
+    let anyRendered = false;
+
+    for(const t of teacherArr){
+      if(teacherFilter && t.id !== teacherFilter) continue;
+
+      const bySlots = assignments?.[t.id] || {};
+      const records = [];
+
+      for(const [slotId, a] of Object.entries(bySlots || {})){
+        const slot = slots?.[slotId];
+        if(!slot) continue;
+
+        const stIds = Object.keys(a?.studentIds || {}).filter(sid=>a?.studentIds?.[sid]);
+        if(stIds.length === 0) continue;
+
+        const stList = stIds
+          .map(sid=>{
+            const st = students?.[sid];
+            return st ? `${safeText(st.number)} — ${safeText(st.fullName)} (${safeText(st.class)})` : `Silinmiş öğrenci (${sid})`;
+          })
+          .sort((a,b)=> a.localeCompare(b, "tr"));
+
+        records.push({
+          teacherId: t.id,
+          teacherName: safeText(t.name),
+          teacherBranch: safeText(t.branch),
+          slotId,
+          day: safeText(slot.day),
+          dayOrder: slot.dayOrder || 99,
+          startMin: slot.startMin || 0,
+          time: slotLabel(slot),
+          count: stIds.length,
+          students: stList
+        });
+      }
+
+      records.sort((a,b)=> (a.dayOrder-b.dayOrder) || (a.startMin-b.startMin) || (a.time||"").localeCompare(b.time||"", "tr"));
+
+      const filtered = records.filter(r=>{
+        if(!q) return true;
+        const hay = `${r.teacherName} ${r.teacherBranch} ${r.day} ${r.time} ${r.students.join(" ")}`.toLowerCase();
+        return hay.includes(q);
+      });
+
+      if(filtered.length === 0) continue;
+
+      // Group header row
+      const gr = document.createElement("tr");
+      gr.className = "groupRow";
+      gr.innerHTML = `<td colspan="7">${escapeHtml(t.name||"Öğretmen")}<span class="mutedSmall">(${escapeHtml(t.branch||"")}) • ${filtered.length} slot</span></td>`;
+      tbody.appendChild(gr);
+
+      for(const r of filtered){
+        const key = aKey(r.teacherId, r.slotId);
+        const checked = assignmentListSelection.has(key);
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input type="checkbox" class="asSel" data-key="${key}" ${checked ? "checked" : ""}></td>
+          <td>${escapeHtml(r.teacherName)}</td>
+          <td>${escapeHtml(r.teacherBranch)}</td>
+          <td>${escapeHtml(r.day)}</td>
+          <td>${escapeHtml(r.time)}</td>
+          <td>${r.count}</td>
+          <td class="rightAlign">
+            <button class="btn3 miniBtn" data-key="${key}" data-act="delAssignRow">Sil</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+        anyRendered = true;
+      }
+    }
+
+    if(!anyRendered){
+      tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:left;padding:14px">Henüz atama bulunamadı.</td></tr>`;
+    }
+  }
+
+  // ===== Atama Listesi: UI Wiring =====
+  if($("assignListTeacher")){
+    $("assignListTeacher").addEventListener("change", renderAssignmentList);
+  }
+  if($("assignListSearch")){
+    $("assignListSearch").addEventListener("input", renderAssignmentList);
+  }
+  if($("btnAssignListClearSel")){
+    $("btnAssignListClearSel").addEventListener("click", ()=>{
+      assignmentListSelection.clear();
+      renderAssignmentList();
+      toast("Seçim temizlendi", "ok");
+    });
+  }
+
+  if($("assignmentListTable")){
+    $("assignmentListTable").addEventListener("change", (e)=>{
+      const cb = e.target;
+      if(!cb?.classList?.contains("asSel")) return;
+      const key = cb.getAttribute("data-key");
+      if(!key) return;
+      if(cb.checked) assignmentListSelection.add(key);
+      else assignmentListSelection.delete(key);
+    });
+
+    $("assignmentListTable").addEventListener("click", async (e)=>{
+      const btn = e.target.closest("button");
+      if(!btn) return;
+      const act = btn.getAttribute("data-act");
+      if(act !== "delAssignRow") return;
+
+      const key = btn.getAttribute("data-key");
+      const { teacherId, slotId } = parseAKey(key);
+      if(!teacherId || !slotId) return;
+
+      const t = teachers?.[teacherId];
+      const s = slots?.[slotId];
+      const msg = `Seçilen atama silinsin mi?\n\nÖğretmen: ${t?.name || teacherId}\nSlot: ${s ? `${s.day} ${slotLabel(s)}` : slotId}`;
+      if(!window.confirm(msg)) return;
+
+      try{
+        await remove(ref(db, `${ROOT}/assignments/${teacherId}/${slotId}`));
+        assignmentListSelection.delete(key);
+        toast("Atama silindi", "ok");
+      }catch(err){
+        console.error(err);
+        toast("Silme başarısız", "bad");
+      }
+    });
+  }
+
+  $("btnAssignListDeleteSelected").addEventListener("click", async ()=>{
+    const keys = Array.from(assignmentListSelection || []);
+    if(keys.length === 0){ toast("Seçim yok", "warn"); return; }
+
+    if(!window.confirm(`Seçilen ${keys.length} atama silinsin mi?`)) return;
+
+    const upd = {};
+    for(const k of keys){
+      const { teacherId, slotId } = parseAKey(k);
+      if(!teacherId || !slotId) continue;
+      upd[`${ROOT}/assignments/${teacherId}/${slotId}`] = null;
+    }
+
+    try{
+      if(Object.keys(upd).length){
+        await update(ref(db), upd);
+      }
+      assignmentListSelection.clear();
+      renderAssignmentList();
+      toast("Seçilen atamalar silindi", "ok");
+    }catch(err){
+      console.error(err);
+      toast("Silme başarısız", "bad");
+    }
+  });
+
+  $("btnAssignListDeleteAll").addEventListener("click", async ()=>{
+    if(!window.confirm("TÜM atamalar silinsin mi?\n\nBu işlem geri alınamaz.")) return;
+    try{
+      await remove(rAssign);
+      assignmentListSelection.clear();
+      renderAssignmentList();
+      toast("Tüm atamalar silindi", "ok");
+    }catch(err){
+      console.error(err);
+      toast("Silme başarısız", "bad");
+    }
+  });
+
+
   // ===== Populate day select =====
   function fillDays(){
     const sel = $("slotDay");
@@ -775,6 +1031,7 @@
     onValue(rAssign, snap=>{
       assignments = snap.val() || {};
       refreshExistingAssignmentView();
+      renderAssignmentList();
       rebuildPrintIfVisible();
     });
 
@@ -1190,7 +1447,7 @@
 
   // ===== Select Refresh =====
   function refreshTeacherSelects(){
-    const sels = [ $("availTeacher"), $("assignTeacher"), $("printTeacher") ];
+    const sels = [ $("availTeacher"), $("assignTeacher"), $("printTeacher"), $("assignListTeacher") ];
     const list = Object.entries(teachers).map(([id,t])=>({id,...t}))
       .sort((a,b)=> (a.name||"").localeCompare(b.name||"", "tr"));
 
@@ -1199,7 +1456,7 @@
       sel.innerHTML = "";
       const opt0 = document.createElement("option");
       opt0.value = "";
-      opt0.textContent = "— Seçiniz —";
+      opt0.textContent = (sel.id === "assignListTeacher") ? "— Tümü —" : "— Seçiniz —";
       sel.appendChild(opt0);
       for(const t of list){
         const opt = document.createElement("option");
@@ -1211,18 +1468,21 @@
     }
     renderAvailabilityMatrix();
     refreshAssignSlots();
+    renderAssignmentList();
     rebuildPrintIfVisible();
   }
 
   function refreshStudentUI(){
     renderAssignStudentList();
     refreshExistingAssignmentView();
+    renderAssignmentList();
     rebuildPrintIfVisible();
   }
 
   function refreshSlotDependentUI(){
     renderAvailabilityMatrix();
     refreshAssignSlots();
+    renderAssignmentList();
     rebuildPrintIfVisible();
   }
 
@@ -1700,6 +1960,7 @@
     refreshAssignSlots();
     renderAssignStudentList();
     updateAssignSummary();
+    renderAssignmentList();
   }
   // listeners will call these, but call once for first paint
   refreshAll();
