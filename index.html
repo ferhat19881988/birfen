@@ -677,7 +677,7 @@
         </div>
 
         <div style="margin-top:1.5rem" id="printContainer" class="printArea">
-          <h3>Liste Önizleme</h3>
+          <h3>Ek Birebir Listesi Fenomen Eğitim Kurumları</h3>
           <div class="muted">Öğretmen seçip "Listeyi Getir" butonuna basınız.</div>
         </div>
       </div>
@@ -1454,16 +1454,34 @@
     for(const sel of sels){
       const prev = sel.value;
       sel.innerHTML = "";
+
+      // Varsayılan seçenekler
       const opt0 = document.createElement("option");
       opt0.value = "";
-      opt0.textContent = (sel.id === "assignListTeacher") ? "— Tümü —" : "— Seçiniz —";
+      if(sel.id === "assignListTeacher"){
+        opt0.textContent = "— Tümü —";
+      }else{
+        opt0.textContent = "— Seçiniz —";
+      }
       sel.appendChild(opt0);
+
+      // Yazdır için "Hepsi" seçeneği
+      if(sel.id === "printTeacher"){
+        const optAll = document.createElement("option");
+        optAll.value = "__ALL__";
+        optAll.textContent = "— Hepsi —";
+        sel.appendChild(optAll);
+      }
+
+      // Öğretmenler
       for(const t of list){
         const opt = document.createElement("option");
         opt.value = t.id;
         opt.textContent = `${t.name} (${t.branch})`;
         sel.appendChild(opt);
       }
+
+      // Önceki seçim varsa geri yükle
       if(prev && [...sel.options].some(o=>o.value===prev)) sel.value = prev;
     }
     renderAvailabilityMatrix();
@@ -1840,47 +1858,38 @@
   });
 
   // ===== Print =====
+  const PRINT_ALL_VALUE = "__ALL__";
+
   function rebuildPrintIfVisible(){
-    // if a teacher selected and print area has content, rebuild.
-    // We'll rebuild when user explicitly requests too, but keep consistent.
-    const teacherId = $("printTeacher").value || "";
+    const v = $("printTeacher").value || "";
     const container = $("printContainer");
-    if(!teacherId) return;
+    if(!v) return;
     if(container && container.dataset.built === "1"){
       buildPrint();
     }
   }
 
-  function buildPrint(){
-    const teacherId = $("printTeacher").value || "";
-    const container = $("printContainer");
-    if(!teacherId){
-      container.innerHTML = `<h3>Liste</h3><div class="muted">Öğretmen seçip “Listeyi Oluştur”a basın.</div>`;
-      container.dataset.built = "0";
-      return;
-    }
-
-    const t = teachers[teacherId];
+  function buildTeacherLines(teacherId){
     const assignObj = assignments?.[teacherId] || {};
     const lines = [];
 
     for(const [slotId, a] of Object.entries(assignObj)){
-      const slot = slots[slotId];
+      const slot = slots?.[slotId];
       if(!slot) continue;
-      const stIds = Object.keys(a?.studentIds || {}).filter(x=>a.studentIds[x]);
+
+      const stIds = Object.keys(a?.studentIds || {}).filter(x=>a?.studentIds?.[x]);
       if(stIds.length===0) continue;
 
-      // expand students
       const stList = stIds
-        .map(sid => ({ sid, st: students[sid] }))
+        .map(sid => ({ sid, st: students?.[sid] }))
         .map(x=>{
           const s = x.st;
-          return s ? `${s.number} — ${s.fullName} (${s.class})` : `Silinmiş öğrenci (${x.sid})`;
+          return s ? `${safeText(s.number)} — ${safeText(s.fullName)} (${safeText(s.class)})` : `Silinmiş öğrenci (${x.sid})`;
         })
         .sort((a,b)=> a.localeCompare(b, "tr"));
 
       lines.push({
-        day: slot.day,
+        day: safeText(slot.day),
         dayOrder: slot.dayOrder || 99,
         startMin: slot.startMin || 0,
         time: slotLabel(slot),
@@ -1889,20 +1898,23 @@
     }
 
     lines.sort((a,b)=> (a.dayOrder-b.dayOrder) || (a.startMin-b.startMin));
+    return lines;
+  }
 
-    // group by day
+  function renderTeacherSectionHtml(teacherId){
+    const t = teachers?.[teacherId];
+    const lines = buildTeacherLines(teacherId);
+
     const byDay = new Map();
     for(const l of lines){
       if(!byDay.has(l.day)) byDay.set(l.day, []);
       byDay.get(l.day).push(l);
     }
 
-    let html = `<h3>${t ? `${t.name} (${t.branch})` : "Öğretmen"}</h3>`;
+    let html = `<h3>${t ? `${escapeHtml(t.name)} (${escapeHtml(t.branch)})` : "Öğretmen"}</h3>`;
     if(lines.length===0){
-      html += `<div class="muted">Bu öğretmen için atama bulunamadı.</div>`;
-      container.innerHTML = html;
-      container.dataset.built = "1";
-      return;
+      html += `<div class="muted">Atama bulunamadı.</div>`;
+      return { hasAny:false, html };
     }
 
     html += `<table>
@@ -1913,34 +1925,67 @@
       const list = byDay.get(d) || [];
       for(const l of list){
         html += `<tr>
-          <td>${d}</td>
-          <td>${l.time}</td>
+          <td>${escapeHtml(d)}</td>
+          <td>${escapeHtml(l.time)}</td>
           <td>${l.students.map(x=>`<div>${escapeHtml(x)}</div>`).join("")}</td>
         </tr>`;
       }
     }
 
     html += `</tbody></table>`;
+    return { hasAny:true, html };
+  }
+
+  function buildPrint(){
+    const v = $("printTeacher").value || "";
+    const container = $("printContainer");
+
+    if(!v){
+      container.innerHTML = `<h3>Ek Birebir Listesi Fenomen Eğitim Kurumları</h3>`;
+      container.dataset.built = "0";
+      toast("Öğretmen veya “Hepsi” seçin", "warn");
+      return;
+    }
+
+    let html = `<h3>Ek Birebir Listesi Fenomen Eğitim Kurumları</h3>`;
+
+    if(v === PRINT_ALL_VALUE){
+      const teacherArr = Object.entries(teachers || {})
+        .map(([id,t])=>({id, ...t}))
+        .sort((a,b)=> (a.name||"").localeCompare(b.name||"", "tr"));
+
+      let any = false;
+      for(const t of teacherArr){
+        const sec = renderTeacherSectionHtml(t.id);
+        // "Hepsi" yazdırmada sadece ataması olan öğretmenler basılsın
+        if(sec.hasAny){
+          html += sec.html;
+          any = true;
+        }
+      }
+      if(!any){
+        html += `<div class="muted">Atama bulunamadı.</div>`;
+      }
+    }else{
+      const sec = renderTeacherSectionHtml(v);
+      html += sec.html;
+    }
+
     container.innerHTML = html;
     container.dataset.built = "1";
   }
 
-  function escapeHtml(str){
-    return String(str)
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
-  }
-
   $("btnBuildPrint").addEventListener("click", buildPrint);
   $("btnPrint").addEventListener("click", ()=>{
+    const v = $("printTeacher").value || "";
+    if(!v){
+      toast("Öğretmen veya “Hepsi” seçin", "warn");
+      return;
+    }
     buildPrint();
     window.print();
   });
-
-  // ===== wiring: assignment student list updates on change =====
+// ===== wiring: assignment student list updates on change =====
   $("assignTeacher").addEventListener("change", ()=>{
     renderAssignStudentList();
     updateAssignSummary();
