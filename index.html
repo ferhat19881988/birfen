@@ -270,6 +270,7 @@
     /* Divider & Hint */
     .divider { height: 1px; background: var(--card-border); margin: 1.5rem 0; }
     .hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem; font-style: italic; }
+    .muted { color: var(--text-muted); font-size: 0.9rem; }
     .mono { font-family: 'SFMono-Regular', Consolas, monospace; opacity: 0.8; }
 
     /* Availability Matrix */
@@ -310,15 +311,18 @@
       background: #fff; color: #1e293b;
       padding: 2rem; border-radius: var(--radius-md);
     }
+    .printArea h1 { margin: 0 0 14px; color: #0f172a; text-align: center; font-size: 1.25rem; }
+    .printArea h2 { margin: 18px 0 10px; color: #0f172a; font-size: 1.05rem; }
     .printArea h3 { margin-top: 0; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
     .printArea table th { background: #f1f5f9; color: #475569; }
     .printArea table td, .printArea table th { border-bottom: 1px solid #e2e8f0; color: #334155; }
+    .printArea .muted { color: #64748b; }
 
     /* Print Media Query */
     @media print {
       body { background: white; color: black; }
       header, .noPrint, .card { box-shadow: none; border: none; }
-      header, .noPrint, .card h2 .right, .btn, .btn2, .btn3, .btn4, .ghost, input, select, .hint { display: none !important; }
+      header, .noPrint, .card h2, .card h2 .right, .btn, .btn2, .btn3, .btn4, .ghost, input, select, .hint { display: none !important; }
       .wrap { padding: 0; max-width: none; }
       .grid { display: block; padding: 0; }
       .card { background: transparent; backdrop-filter: none; page-break-inside: avoid; display: none; } /* Hide all cards usually */
@@ -677,8 +681,8 @@
         </div>
 
         <div style="margin-top:1.5rem" id="printContainer" class="printArea">
-          <h3>Liste Önizleme</h3>
-          <div class="muted">Öğretmen seçip "Listeyi Getir" butonuna basınız.</div>
+          <h3>Fenomen Eğitim Kurumları Ek Birebir Listesi</h3>
+          <div class="muted">Öğretmen seçip "Listeyi Getir" butonuna basınız. "Tüm Öğretmenler" seçerseniz tüm öğretmenlerin listesi oluşur.</div>
         </div>
       </div>
     </section>
@@ -1458,6 +1462,12 @@
       opt0.value = "";
       opt0.textContent = (sel.id === "assignListTeacher") ? "— Tümü —" : "— Seçiniz —";
       sel.appendChild(opt0);
+      if(sel.id === "printTeacher"){
+        const optAll = document.createElement("option");
+        optAll.value = "__ALL__";
+        optAll.textContent = "— Tüm Öğretmenler —";
+        sel.appendChild(optAll);
+      }
       for(const t of list){
         const opt = document.createElement("option");
         opt.value = t.id;
@@ -1841,86 +1851,115 @@
 
   // ===== Print =====
   function rebuildPrintIfVisible(){
-    // if a teacher selected and print area has content, rebuild.
-    // We'll rebuild when user explicitly requests too, but keep consistent.
-    const teacherId = $("printTeacher").value || "";
     const container = $("printContainer");
-    if(!teacherId) return;
     if(container && container.dataset.built === "1"){
       buildPrint();
     }
   }
 
   function buildPrint(){
-    const teacherId = $("printTeacher").value || "";
+    const teacherSel = $("printTeacher").value || "";
     const container = $("printContainer");
-    if(!teacherId){
-      container.innerHTML = `<h3>Liste</h3><div class="muted">Öğretmen seçip “Listeyi Oluştur”a basın.</div>`;
+
+    const TITLE = "Fenomen Eğitim Kurumları Ek Birebir Listesi";
+
+    const teacherArr = Object.entries(teachers || {})
+      .map(([id,t])=>({ id, ...t }))
+      .sort((a,b)=> (a.name||"").localeCompare(b.name||"", "tr"));
+
+    function collectLines(teacherId){
+      const assignObj = assignments?.[teacherId] || {};
+      const lines = [];
+
+      for(const [slotId, a] of Object.entries(assignObj || {})){
+        const slot = slots?.[slotId];
+        if(!slot) continue;
+
+        const stIds = Object.keys(a?.studentIds || {}).filter(x=>a?.studentIds?.[x]);
+        if(stIds.length===0) continue;
+
+        const stList = stIds
+          .map(sid => ({ sid, st: students?.[sid] }))
+          .map(x=>{
+            const s = x.st;
+            return s ? `${safeText(s.number)} — ${safeText(s.fullName)} (${safeText(s.class)})` : `Silinmiş öğrenci (${x.sid})`;
+          })
+          .sort((a,b)=> a.localeCompare(b, "tr"));
+
+        lines.push({
+          day: safeText(slot.day),
+          dayOrder: slot.dayOrder || 99,
+          startMin: slot.startMin || 0,
+          time: slotLabel(slot),
+          students: stList
+        });
+      }
+
+      lines.sort((a,b)=> (a.dayOrder-b.dayOrder) || (a.startMin-b.startMin) || (a.time||"").localeCompare(b.time||"", "tr"));
+
+      // group by day (preserve DAYS ordering)
+      const byDay = new Map();
+      for(const l of lines){
+        if(!byDay.has(l.day)) byDay.set(l.day, []);
+        byDay.get(l.day).push(l);
+      }
+
+      return { lines, byDay };
+    }
+
+    function renderTeacherSection(teacherId){
+      const t = teachers?.[teacherId];
+      const { lines, byDay } = collectLines(teacherId);
+
+      let html = `<h2>${escapeHtml(t?.name || "Öğretmen")}${t?.branch ? ` <span style="font-weight:500;color:#64748b">(${escapeHtml(t.branch)})</span>` : ""}</h2>`;
+
+      html += `<table>
+        <thead><tr><th style="width:140px">Gün</th><th style="width:120px">Saat</th><th>Öğrenciler</th></tr></thead>
+        <tbody>`;
+
+      if(lines.length===0){
+        html += `<tr><td colspan="3" class="muted">Atama yok.</td></tr>`;
+      }else{
+        for(const d of DAYS.map(x=>x.key)){
+          const list = byDay.get(d) || [];
+          for(const l of list){
+            html += `<tr>
+              <td>${escapeHtml(d)}</td>
+              <td>${escapeHtml(l.time)}</td>
+              <td>${l.students.map(x=>`<div>${escapeHtml(x)}</div>`).join("")}</td>
+            </tr>`;
+          }
+        }
+      }
+
+      html += `</tbody></table>`;
+      return html;
+    }
+
+    if(!teacherSel){
+      container.innerHTML = `<h3>${TITLE}</h3><div class="muted">Öğretmen seçip "Listeyi Getir" butonuna basın. Tüm öğretmenlerin listesi için "Tüm Öğretmenler" seçin.</div>`;
       container.dataset.built = "0";
       return;
     }
 
-    const t = teachers[teacherId];
-    const assignObj = assignments?.[teacherId] || {};
-    const lines = [];
+    let html = `<h1>${TITLE}</h1>`;
 
-    for(const [slotId, a] of Object.entries(assignObj)){
-      const slot = slots[slotId];
-      if(!slot) continue;
-      const stIds = Object.keys(a?.studentIds || {}).filter(x=>a.studentIds[x]);
-      if(stIds.length===0) continue;
-
-      // expand students
-      const stList = stIds
-        .map(sid => ({ sid, st: students[sid] }))
-        .map(x=>{
-          const s = x.st;
-          return s ? `${s.number} — ${s.fullName} (${s.class})` : `Silinmiş öğrenci (${x.sid})`;
-        })
-        .sort((a,b)=> a.localeCompare(b, "tr"));
-
-      lines.push({
-        day: slot.day,
-        dayOrder: slot.dayOrder || 99,
-        startMin: slot.startMin || 0,
-        time: slotLabel(slot),
-        students: stList
-      });
-    }
-
-    lines.sort((a,b)=> (a.dayOrder-b.dayOrder) || (a.startMin-b.startMin));
-
-    // group by day
-    const byDay = new Map();
-    for(const l of lines){
-      if(!byDay.has(l.day)) byDay.set(l.day, []);
-      byDay.get(l.day).push(l);
-    }
-
-    let html = `<h3>${t ? `${t.name} (${t.branch})` : "Öğretmen"}</h3>`;
-    if(lines.length===0){
-      html += `<div class="muted">Bu öğretmen için atama bulunamadı.</div>`;
-      container.innerHTML = html;
-      container.dataset.built = "1";
-      return;
-    }
-
-    html += `<table>
-      <thead><tr><th style="width:140px">Gün</th><th style="width:120px">Saat</th><th>Öğrenciler</th></tr></thead>
-      <tbody>`;
-
-    for(const d of DAYS.map(x=>x.key)){
-      const list = byDay.get(d) || [];
-      for(const l of list){
-        html += `<tr>
-          <td>${d}</td>
-          <td>${l.time}</td>
-          <td>${l.students.map(x=>`<div>${escapeHtml(x)}</div>`).join("")}</td>
-        </tr>`;
+    if(teacherSel === "__ALL__"){
+      // yalnızca ataması olan öğretmenleri yazdır
+      let any = false;
+      for(const t of teacherArr){
+        const { lines } = collectLines(t.id);
+        if(lines.length===0) continue;
+        html += renderTeacherSection(t.id);
+        any = true;
       }
+      if(!any){
+        html += `<div class="muted">Atama yok.</div>`;
+      }
+    }else{
+      html += renderTeacherSection(teacherSel);
     }
 
-    html += `</tbody></table>`;
     container.innerHTML = html;
     container.dataset.built = "1";
   }
