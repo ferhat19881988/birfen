@@ -327,8 +327,9 @@
       .grid { display: block; padding: 0; }
       .card { background: transparent; backdrop-filter: none; page-break-inside: avoid; display: none; } /* Hide all cards usually */
       /* Only show print container content if we really want, but usually custom print logic is handled by hiding UI */
-      #printCard { display: block; border: none; }
-      .card:has(#printContainer) { display: block; border: none; }
+      #printCard { display: none !important; }
+      .card:has(#printContainer) { display: block !important; border: none !important; }
+      #outputCard { display: block !important; border: none !important; }
       .printArea { display: block; padding: 0; width: 100%; }
     }
     
@@ -665,7 +666,7 @@
 
 
 
-    <section class="card span2">
+    <section class="card span2" id="outputCard">
       <h2>
         <span><i class="mono">07.</i> Çıktı Al</span>
         <div class="right noPrint">
