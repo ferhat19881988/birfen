@@ -322,11 +322,12 @@
     @media print {
       body { background: white; color: black; }
       header, .noPrint, .card { box-shadow: none; border: none; }
-      header, .noPrint, .card h2, .card h2 .right, .btn, .btn2, .btn3, .btn4, .ghost, input, select, .hint { display: none !important; }
+      header, .noPrint, .card > h2, .card > h2 .right, .btn, .btn2, .btn3, .btn4, .ghost, input, select, .hint { display: none !important; }
       .wrap { padding: 0; max-width: none; }
       .grid { display: block; padding: 0; }
       .card { background: transparent; backdrop-filter: none; page-break-inside: avoid; display: none; } /* Hide all cards usually */
       /* Only show print container content if we really want, but usually custom print logic is handled by hiding UI */
+      #printCard { display: block; border: none; }
       .card:has(#printContainer) { display: block; border: none; }
       .printArea { display: block; padding: 0; width: 100%; }
     }
@@ -467,7 +468,7 @@
       </div>
     </section>
 
-    <section class="card span2">
+    <section class="card span2" id="printCard">
       <h2>
         <span><i class="mono">03.</i> Ders Planı / Slotlar</span>
         <div class="right noPrint">
